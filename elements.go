@@ -1,0 +1,270 @@
+package goqueue
+
+import (
+	"errors"
+	"sort"
+)
+
+func NewElements(cap int) *Elements {
+	return &Elements{
+		values: make([]interface{}, cap),
+		Cap:    cap,
+	}
+}
+
+var emptyErr = errors.New("elements is empty")
+var fullErr = errors.New("elements is full")
+var pushErr = errors.New("push index is in the end")
+
+type Elements struct {
+	values []interface{}
+	Len    int
+	Cap    int
+	head   int
+}
+
+func (e *Elements) Pop() (interface{}, error) {
+	if e.IsEmpty() {
+		return nil, emptyErr
+	}
+
+	e.Len -= 1
+	value := e.values[e.head]
+	e.values[e.head] = nil
+	e.head += 1
+	return value, nil
+}
+
+func (e *Elements) Push(v interface{}) error {
+	err := e.pushable()
+	if err != nil {
+		return err
+	}
+
+	e.Len += 1
+	e.values[e.tail()] = v
+
+	return nil
+}
+
+func (e *Elements) PushForce(v interface{}) error {
+	err := e.Push(v)
+
+	if err != pushErr || e.head == 0 {
+		return err
+	}
+
+	if e.Rebuild() == nil {
+		return e.Push(v)
+	}
+
+	return err
+}
+
+func (e *Elements) Find(f func(v interface{}) bool) (int, error) {
+	if e.IsEmpty() {
+		return 0, emptyErr
+	}
+
+	tail := e.tail()
+	for start := e.head; start <= tail; start += 1 {
+		if f(e.values[start]) {
+			return start, nil
+		}
+	}
+
+	return 0, errors.New("not found")
+}
+
+func (e *Elements) FindAll(f func(v interface{}) bool) ([]int, error) {
+	if e.IsEmpty() {
+		return nil, emptyErr
+	}
+
+	index := make([]int, 0)
+	tail := e.tail()
+	for start := e.head; start <= tail; start += 1 {
+		if f(e.values[start]) {
+			index = append(index, start)
+		}
+	}
+
+	return index, nil
+}
+
+func (e *Elements) Rebuild() error {
+	if e.head == 0 {
+		return nil
+	}
+
+	if e.IsEmpty() {
+		e.head = 0
+		return nil
+	}
+
+	old := e.values
+	e.values = make([]interface{}, e.Cap)
+	length := copy(e.values, old[e.head:e.tail()])
+	if length < 0 || length != e.Len {
+		e.values = old
+		return errors.New("rebuild failed")
+	}
+
+	e.head = 0
+
+	return nil
+}
+
+func (e *Elements) MoveHead(head int) int {
+	if head < 0 {
+		return 0
+	}
+	
+	if e.head > head || e.IsEmpty() {
+		return 0
+	}
+	
+	tail := e.tail()
+	if tail < head {
+		head = tail
+	}
+	
+	index := make([]int, 0, head - e.head + 1)
+	for i := e.head; i <= head; i++ {
+		index = append(index, i)
+	}
+	
+	return e.eraseByIndex(index)
+}
+
+func (e *Elements) MoveTail(t int) int {
+	if t < 0 || e.IsEmpty() {
+		return 0
+	}
+	
+	tail := e.tail()
+	
+	if t > tail {
+		return 0
+	}
+	
+	index := make([]int, 0, tail - t + 1)
+	for i := t; i <= tail; i++ {
+		index = append(index, i)
+	}
+	
+	return e.eraseByIndex(index)
+}
+
+func (e *Elements) eraseByIndex(index []int) int {
+	eCount := 0
+	if index == nil {
+		return eCount
+	}
+
+	if e.IsEmpty() {
+		return eCount
+	}
+	
+	sort.Ints(index)
+
+	doIndex := make([]int, 0, len(index))
+	tail := e.tail()
+	for _, i := range index {
+		if i < 0 {
+			continue
+		}
+		if i < e.head || i > tail {
+			continue
+		}
+
+		e.values[i] = nil
+		doIndex = append(doIndex, i)
+		eCount++
+	}
+	e.Len -= eCount
+
+	if e.IsEmpty() {
+		return eCount
+	}
+
+	var ii int
+	for len(doIndex) != 0 {
+		ii = doIndex[0]
+		if doIndex[0] != e.head {
+			break
+		}
+		e.head++
+		doIndex = doIndex[1:]
+	}
+
+	for len(doIndex) != 0 {
+		ui := doIndex[0]
+		doIndex = doIndex[1:]
+
+		for len(doIndex) != 0 {
+			if doIndex[0] != ui+1 {
+				break
+			}
+			ui = doIndex[0]
+			doIndex = doIndex[1:]
+		}
+		var start, end int
+		start = ui + 1
+		if len(doIndex) == 0 {
+			end = e.tail()
+		} else {
+			end = doIndex[0] - 1
+		}
+
+		for ; start <= end; start += 1 {
+			e.values[ii] = e.values[start]
+			e.values[start] = nil
+			ii++
+		}
+	}
+
+	return eCount
+}
+
+func (e *Elements) Tail() (int, error) {
+	tail := e.tail()
+	var err error
+	if e.IsEmpty() {
+		err = emptyErr
+	}
+
+	return tail, err
+}
+
+func (e *Elements) tail() int {
+	if e.IsEmpty() {
+		return e.head
+	}
+
+	return e.head + e.Len - 1
+}
+
+func (e *Elements) Pushable() bool {
+	return e.pushable() == nil
+}
+
+func (e *Elements) pushable() error {
+	if e.IsFull() {
+		return fullErr
+	}
+
+	if e.tail() + 1 == e.Cap {
+		return pushErr
+	}
+
+	return nil
+}
+
+func (e *Elements) IsFull() bool {
+	return e.Len == e.Cap
+}
+
+func (e *Elements) IsEmpty() bool {
+	return e.Len == 0
+}
