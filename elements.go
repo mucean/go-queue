@@ -8,7 +8,7 @@ import (
 func NewElements(cap int) *Elements {
 	return &Elements{
 		values: make([]interface{}, cap),
-		Cap:    cap,
+		cap:    cap,
 	}
 }
 
@@ -18,8 +18,8 @@ var pushErr = errors.New("push index is in the end")
 
 type Elements struct {
 	values []interface{}
-	Len    int
-	Cap    int
+	len    int
+	cap    int
 	head   int
 }
 
@@ -28,7 +28,7 @@ func (e *Elements) Pop() (interface{}, error) {
 		return nil, emptyErr
 	}
 
-	e.Len -= 1
+	e.len -= 1
 	value := e.values[e.head]
 	e.values[e.head] = nil
 	e.head += 1
@@ -41,7 +41,7 @@ func (e *Elements) Push(v interface{}) error {
 		return err
 	}
 
-	e.Len += 1
+	e.len += 1
 	e.values[e.tail()] = v
 
 	return nil
@@ -103,9 +103,9 @@ func (e *Elements) Rebuild() error {
 	}
 
 	old := e.values
-	e.values = make([]interface{}, e.Cap)
+	e.values = make([]interface{}, e.cap)
 	length := copy(e.values, old[e.head:e.tail()])
-	if length < 0 || length != e.Len {
+	if length < 0 || length != e.len {
 		e.values = old
 		return errors.New("rebuild failed")
 	}
@@ -182,7 +182,7 @@ func (e *Elements) eraseByIndex(index []int) int {
 		doIndex = append(doIndex, i)
 		eCount++
 	}
-	e.Len -= eCount
+	e.len -= eCount
 
 	if e.IsEmpty() {
 		return eCount
@@ -242,7 +242,7 @@ func (e *Elements) tail() int {
 		return e.head
 	}
 
-	return e.head + e.Len - 1
+	return e.head + e.len - 1
 }
 
 func (e *Elements) Pushable() bool {
@@ -254,17 +254,25 @@ func (e *Elements) pushable() error {
 		return fullErr
 	}
 
-	if e.tail() + 1 == e.Cap {
+	if e.tail() + 1 == e.cap {
 		return pushErr
 	}
 
 	return nil
 }
 
+func (e *Elements) Len() int {
+	return e.len
+}
+
+func (e *Elements) Cap() int {
+	return e.cap
+}
+
 func (e *Elements) IsFull() bool {
-	return e.Len == e.Cap
+	return e.len == e.cap
 }
 
 func (e *Elements) IsEmpty() bool {
-	return e.Len == 0
+	return e.len == 0
 }
