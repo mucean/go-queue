@@ -238,10 +238,6 @@ func (e *Elements) Tail() (int, error) {
 }
 
 func (e *Elements) tail() int {
-	if e.IsEmpty() {
-		return e.head
-	}
-
 	return e.head + e.len - 1
 }
 
@@ -254,7 +250,7 @@ func (e *Elements) pushable() error {
 		return fullErr
 	}
 
-	if e.tail() + 1 == e.cap {
+	if e.tail() + 1 >= e.cap {
 		return pushErr
 	}
 
