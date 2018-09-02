@@ -77,11 +77,30 @@ func TestElements_Push_Full(t *testing.T) {
 	}
 }
 
-func TestElements_Pop(t *testing.T) {
-	e := NewElements(capLen)
-	for i := 0; i < capLen; i++ {
-		e.Push(i)
+func TestElements_PushForce(t *testing.T) {
+	ee := emptyElements()
+	fe := fullElements()
+	if err := ee.PushForce(1); err != nil {
+		t.Fatalf("PushForce method must return nil error when the elements empty")
 	}
+	
+	if err := fe.PushForce(1); err != fullErr {
+		t.Fatalf("PushForce method must return fullErr error when the elements full")
+	}
+	
+	fe.Pop()
+	if err := fe.PushForce(1); err != nil {
+		t.Fatalf("PushForce method must return nil error, but error is: %s", err.Error())
+	}
+
+	// check PushForce is use Rebuild and Push method
+	if err := fe.PushForce(1); err != fullErr {
+		t.Fatalf("PushForce method must return fullErr error when the elements full")
+	}
+}
+
+func TestElements_Pop(t *testing.T) {
+	e := fullElements()
 	
 	length := e.len
 	for i := 0; i < capLen; i++ {
@@ -105,9 +124,15 @@ func TestElements_Pop(t *testing.T) {
 	}
 }
 
-func TestElements_Pushable(t *testing.T) {
-	e := NewElements(capLen)
+func TestElements_pushable(t *testing.T) {
+	e := emptyElements()
 	for i := 0; i < capLen; i++ {
+		if err := e.pushable(); err != nil {
+			t.Errorf("push %d times failed: %s", i + 1, err.Error())
+		}
+		if !e.Pushable() {
+			t.Fatalf("Pushable method return false when push %d times", i + 1)
+		}
 		e.Push(i)
 	}
 	
@@ -115,13 +140,67 @@ func TestElements_Pushable(t *testing.T) {
 		t.Errorf("pushable of the full elements must return `fullErr`")
 	}
 	
+	if e.Pushable() {
+		t.Fatalf("Pushable method return true when elements is full")
+	}
+	
 	for i := 0; i < capLen; i++ {
 		e.Pop()
+		if err := e.pushable(); err != pushErr {
+			t.Error(err)
+		}
+		
+		if e.Pushable() {
+			t.Fatalf("Pushable method must return true when index of tail in the end")
+		}
+	}
+
+	if err := e.pushable(); err != pushErr {
+		t.Error(err)
+	}
+	
+	if e.Pushable() {
+		t.Fatalf("Pushable method must return true when index of tail in the end")
+	}
+}
+
+func TestElements_tail(t *testing.T) {
+	e := emptyElements()
+	for i := 0; i < capLen; i++ {
+		e.Push(i)
+		if e.tail() != i {
+			t.Errorf("tail must equal to %d, %d gives", i, e.tail())
+		}
 	}
 	if e.tail() != capLen - 1 {
 		t.Errorf("tail must equal to %d, %d gives", capLen - 1, e.tail())
 	}
-	if err := e.pushable(); err != pushErr {
-		t.Error(err)
+	
+	for i := 0; i < capLen; i++ {
+		e.Pop()
+		if e.tail() != capLen - 1 {
+			t.Errorf("pop method can not change tail index")
+		}
 	}
+}
+
+func emptyElements() *Elements {
+	return NewElements(capLen)
+}
+
+func fullElements() *Elements {
+	e := emptyElements()
+	for i := 0; i < capLen; i++ {
+		e.Push(i)
+	}
+	
+	return e
+}
+
+func tailEndNotFullElements(popTime int) *Elements {
+	e := fullElements()
+	for i := 0; i < popTime; i++ {
+		e.Pop()
+	}
+	return e
 }

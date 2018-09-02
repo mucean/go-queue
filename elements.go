@@ -54,11 +54,11 @@ func (e *Elements) PushForce(v interface{}) error {
 		return err
 	}
 
-	if e.Rebuild() == nil {
+	if err = e.Rebuild(); err == nil {
 		return e.Push(v)
+	} else {
+		return err
 	}
-
-	return err
 }
 
 func (e *Elements) Find(f func(v interface{}) bool) (int, error) {
@@ -104,8 +104,8 @@ func (e *Elements) Rebuild() error {
 
 	old := e.values
 	e.values = make([]interface{}, e.cap)
-	length := copy(e.values, old[e.head:e.tail()])
-	if length < 0 || length != e.len {
+	length := copy(e.values, old[e.head:e.tail() + 1])
+	if length != e.len {
 		e.values = old
 		return errors.New("rebuild failed")
 	}
@@ -124,8 +124,7 @@ func (e *Elements) MoveHead(head int) int {
 		return 0
 	}
 	
-	tail := e.tail()
-	if tail < head {
+	if tail := e.tail(); tail < head {
 		head = tail
 	}
 	
