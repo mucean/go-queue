@@ -1,6 +1,8 @@
 package goqueue
 
-import "testing"
+import (
+	"testing"
+)
 
 var capLen = 100
 
@@ -120,6 +122,37 @@ func TestElements_Pop(t *testing.T) {
 
 		if i + 1 != e.head {
 			t.Errorf("pop method add the head index, head must be %d, %d gives", i + 1, e.head)
+		}
+	}
+}
+
+func TestElements_Find(t *testing.T) {
+	findTests := []struct{
+		e *Elements
+		i int
+		err error
+		f func (v interface{}) bool
+	}{
+		{emptyElements(), 0, emptyErr, func(v interface{}) bool {
+			return true
+		}},
+		{fullElements(), 0, nil, func(v interface{}) bool {
+			return v.(int) == 0
+		}},
+		{fullElements(), capLen - 1, nil, func(v interface{}) bool {
+			return v.(int) == capLen - 1
+		}},
+		{fullElements(), 0, notFoundErr, func(v interface{}) bool {
+			return v.(int) == capLen
+		}},
+		{fullElements(), 2, nil, func(v interface{}) bool {
+			return v.(int) > 1
+		}},
+	}
+
+	for _, test := range findTests {
+		if i, err := test.e.Find(test.f); i != test.i || err != test.err {
+			t.Fatalf("Find method must return idex: %d, err: %s, but index result: %d, err result: %s", test.i, test.err, i, err)
 		}
 	}
 }

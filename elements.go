@@ -15,6 +15,7 @@ func NewElements(cap int) *Elements {
 var emptyErr = errors.New("elements is empty")
 var fullErr = errors.New("elements is full")
 var pushErr = errors.New("push index is in the end")
+var notFoundErr = errors.New("not found")
 
 type Elements struct {
 	values []interface{}
@@ -73,7 +74,7 @@ func (e *Elements) Find(f func(v interface{}) bool) (int, error) {
 		}
 	}
 
-	return 0, errors.New("not found")
+	return 0, notFoundErr
 }
 
 func (e *Elements) FindAll(f func(v interface{}) bool) ([]int, error) {
@@ -89,7 +90,10 @@ func (e *Elements) FindAll(f func(v interface{}) bool) ([]int, error) {
 		}
 	}
 
-	return index, nil
+	if len(index) > 0 {
+		return index, nil
+	}
+	return nil, notFoundErr
 }
 
 func (e *Elements) Rebuild() error {
