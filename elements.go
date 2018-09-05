@@ -231,13 +231,11 @@ func (e *Elements) eraseByIndex(index []int) int {
 }
 
 func (e *Elements) Tail() (int, error) {
-	tail := e.tail()
-	var err error
 	if e.IsEmpty() {
-		err = emptyErr
+		return 0, emptyErr
 	}
 
-	return tail, err
+	return e.tail(), nil
 }
 
 func (e *Elements) tail() int {
