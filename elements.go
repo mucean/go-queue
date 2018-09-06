@@ -120,18 +120,14 @@ func (e *Elements) Rebuild() error {
 }
 
 func (e *Elements) MoveHead(head int) int {
-	if head < 0 {
-		return 0
-	}
-	
 	if e.head > head || e.IsEmpty() {
 		return 0
 	}
-	
+
 	if tail := e.tail(); tail < head {
 		head = tail
 	}
-	
+
 	index := make([]int, 0, head - e.head + 1)
 	for i := e.head; i <= head; i++ {
 		index = append(index, i)
@@ -141,21 +137,25 @@ func (e *Elements) MoveHead(head int) int {
 }
 
 func (e *Elements) MoveTail(t int) int {
-	if t < 0 || e.IsEmpty() {
+	if e.IsEmpty() {
 		return 0
 	}
-	
+
 	tail := e.tail()
-	
+
 	if t > tail {
 		return 0
 	}
-	
+
+	if t < e.head {
+		t = e.head
+	}
+
 	index := make([]int, 0, tail - t + 1)
 	for i := t; i <= tail; i++ {
 		index = append(index, i)
 	}
-	
+
 	return e.eraseByIndex(index)
 }
 
@@ -174,9 +174,6 @@ func (e *Elements) eraseByIndex(index []int) int {
 	doIndex := make([]int, 0, len(index))
 	tail := e.tail()
 	for _, i := range index {
-		if i < 0 {
-			continue
-		}
 		if i < e.head || i > tail {
 			continue
 		}

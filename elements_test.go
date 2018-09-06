@@ -224,19 +224,113 @@ func TestElements_Rebuild(t *testing.T) {
 		}
 		
 		if test.len > 0 {
-			var err1, err2 error
-			var v1, v2 interface{}
-			for i := 0; i < test.len; i++ {
-				v1, err1 = test.e.Pop()
-				v2, err2 = test.oe.Pop()
-				if v1 != v2 {
-					t.Fatalf("left is %v, right is %v", v1, v2)
-				}
-				
-				if err1 != err2 {
-					t.Fatalf("left error is %s, right error is %s", err1, err2)
-				}
-			}
+			elementsEqual(test.e, test.oe, t)
+		}
+	}
+}
+
+func TestElements_MoveHead(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		head int
+		count int
+		ae *Elements
+	}{
+		{emptyElements(), -1, 0, nil},
+		{emptyElements(), 0, 0, nil},
+		{emptyElements(), 2, 0, nil},
+		{fullElementsPop(2), 1, 0, fullElementsPop(2)},
+		{popTimes(2, emptyElementsPush(2)), 2, 0, nil},
+		{emptyElementsPush(1), 0, 1, nil},
+		{fullElements(), capLen - 1, capLen, nil},
+		{fullElements(), capLen, capLen, nil},
+		{emptyElementsPush(2), 0, 1, popTimes(1, emptyElementsPush(2))},
+	}
+	
+	for _, test := range tests {
+		if count := test.e.MoveHead(test.head); count != test.count {
+			t.Fatalf("MoveHead method must return %d, now return %d", test.head, count)
+		}
+		
+		if length := test.e.Len(); length > 0 {
+			elementsEqual(test.e, test.ae, t)
+		}
+	}
+}
+
+func TestElements_MoveTail(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		t int
+		count int
+		ae *Elements
+	}{
+		{emptyElements(), 0, 0, nil},
+		{emptyElementsPush(1), 2, 0, emptyElementsPush(1)},
+		{fullElementsPop(2), 1, capLen - 2, nil},
+		{fullElements(), capLen - 1, 1, emptyElementsPush(capLen - 1)},
+		{fullElements(), capLen - 49, 49, emptyElementsPush(capLen - 49)},
+	}
+
+	for _, test := range tests {
+		if count := test.e.MoveTail(test.t); count != test.count {
+			t.Fatalf("MoveTail method must return %d, now return %d", test.t, count)
+		}
+
+		if length := test.e.Len(); length > 0 {
+			elementsEqual(test.e, test.ae, t)
+		}
+	}
+}
+
+func TestElements_eraseByIndex(t *testing.T) {
+	e1 := popTimes(3, emptyElementsPush(5))
+	e1.Push(6)
+	e1.Push(8)
+	tests := []struct{
+		e *Elements
+		ins []int
+		c int
+		l int
+		ae *Elements
+	}{
+		{emptyElements(), nil, 0, 0, nil},
+		{emptyElements(), []int{1}, 0, 0,  emptyElements()},
+		{emptyElementsPush(10), []int{0, 1, 2}, 3, 7, popTimes(3, emptyElementsPush(10))},
+		{emptyElementsPush(10), []int{7, 8, 9}, 3, 7, emptyElementsPush(7)},
+		{emptyElementsPush(6), []int{0, 1, 2, 3, 4, 5}, 6, 0, emptyElements()},
+		{popTimes(2, emptyElementsPush(10)), []int{0, 20, 1, 2, 9, 7, -1, 5}, 4,4,  e1},
+		{fullElements(), []int{100, 101, 99, 0}, 2, 98, popTimes(1, emptyElementsPush(99))},
+	}
+
+	for _, test := range tests {
+		if c := test.e.eraseByIndex(test.ins); c != test.c {
+			t.Fatalf("eraseByIndex method must return %d, now return %d", test.c, c)
+		}
+
+		if test.e.Len() != test.l {
+			t.Fatalf("the length of element must equal to %d after eraseByIndex method, now is %d", test.l, test.e.Len())
+		}
+
+		if test.ae != nil && test.ae.Len() > 0 {
+			elementsEqual(test.e, test.ae, t)
+		}
+	}
+}
+
+func TestElements_Pushable(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		b bool
+	}{
+		{emptyElements(), true},
+		{fullElements(), false},
+		{popTimes(capLen, fullElements()), false},
+	}
+
+	for _, test := range tests {
+		if b := test.e.Pushable(); b != test.b {
+			t.Fatalf("Pushable method must return bool %v, now bool %v gives", test.b, b)
 		}
 	}
 }
@@ -281,6 +375,28 @@ func TestElements_pushable(t *testing.T) {
 	}
 }
 
+func TestElements_Tail(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		t int
+		err error
+	}{
+		{emptyElements(), 0, emptyErr},
+		{popTimes(2, emptyElementsPush(2)), 0, emptyErr},
+		{emptyElementsPush(2), 1, nil},
+		{fullElements(), capLen - 1, nil},
+		{popTimes(5, fullElements()), capLen - 1, nil},
+	}
+
+	for _, test := range tests {
+		if tail, err := test.e.Tail(); tail != test.t {
+			t.Fatalf("Tail method must return %d, %d gives", test.t, tail)
+		} else if err != test.err {
+			t.Fatalf("Tail method must return `%s` error, now `%s` error gives", test.err, err)
+		}
+	}
+}
+
 func TestElements_tail(t *testing.T) {
 	e := emptyElements()
 	for i := 0; i < capLen; i++ {
@@ -297,6 +413,79 @@ func TestElements_tail(t *testing.T) {
 		e.Pop()
 		if e.tail() != capLen - 1 {
 			t.Errorf("pop method can not change tail index")
+		}
+	}
+}
+
+func TestElements_Len(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		l int
+	}{
+		{emptyElements(), 0},
+		{emptyElementsPush(2), 2},
+		{popTimes(2, emptyElementsPush(5)), 5 - 2},
+		{fullElements(), capLen},
+		{popTimes(50, fullElements()), capLen - 50},
+	}
+
+	for _, test := range tests {
+		if l := test.e.Len(); l != test.l {
+			t.Fatalf("Len method must return %d, %d gives", test.l, l)
+		}
+	}
+}
+
+func TestElements_Cap(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		c int
+	}{
+		{emptyElements(), capLen},
+		{emptyElementsPush(2), capLen},
+		{fullElements(), capLen},
+		{popTimes(5, fullElements()), capLen},
+	}
+
+	for _, test := range tests {
+		if c := test.e.Cap(); c != test.c {
+			t.Fatalf("Cap method must return %d, %d gives", test.c, c)
+		}
+	}
+}
+
+func TestElements_IsFull(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		b bool
+	}{
+		{emptyElements(), false},
+		{fullElements(), true},
+		{popTimes(capLen, fullElements()), false},
+		{popTimes(5, fullElements()), false},
+	}
+
+	for _, test := range tests {
+		if b := test.e.IsFull(); b != test.b {
+			t.Fatalf("IsFull method must return bool %v, now bool %v gives", test.b, b)
+		}
+	}
+}
+
+func TestElements_IsEmpty(t *testing.T) {
+	tests := []struct{
+		e *Elements
+		b bool
+	}{
+		{emptyElements(), true},
+		{fullElements(), false},
+		{popTimes(capLen, fullElements()), true},
+		{popTimes(5, fullElements()), false},
+	}
+
+	for _, test := range tests {
+		if b := test.e.IsEmpty(); b != test.b {
+			t.Fatalf("IsEmpty method must return bool %v, now bool %v gives", test.b, b)
 		}
 	}
 }
@@ -350,4 +539,23 @@ func fullElementsPop(popTime int) *Elements {
 		e.Pop()
 	}
 	return e
+}
+
+func elementsEqual(e1, e2 *Elements, t *testing.T) {
+	if e1.Len() != e2.Len() {
+		t.Fatalf("left length: %d, right length: %d", e1.Len(), e2.Len())
+	}
+	var err1, err2 error
+	var v1, v2 interface{}
+	for i := 0; i < e1.len; i++ {
+		v1, err1 = e1.Pop()
+		v2, err2 = e2.Pop()
+		if v1.(int) != v2.(int) {
+			t.Fatalf("left is %v, right is %v", v1, v2)
+		}
+		
+		if err1 != err2 {
+			t.Fatalf("left error is %s, right error is %s", err1, err2)
+		}
+	}
 }
