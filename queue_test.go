@@ -71,21 +71,20 @@ func TestQueue_Push(t *testing.T) {
 	}
 	tests := []struct {
 		q  *Queue
-		pt int
 		ck []check
 	}{
-		{emptyQueue(), 0, []check{
+		{emptyQueue(), []check{
 			{50, nil},
 			{capacity - 50, nil},
 			{1, fqErr},
 		}},
-		{popQueue(fullQueue(), 50), capacity - 50, []check{
+		{popQueue(fullQueue(), 50), []check{
 			{10, nil},
 			{39, nil},
 			{1, nil},
 			{10, fqErr},
 		}},
-		{fullQueue(), 0, []check{
+		{fullQueue(), []check{
 			{50, fqErr},
 		}},
 	}
@@ -102,13 +101,12 @@ func TestQueue_Push(t *testing.T) {
 			}
 		}
 
-		popQueue(test.q, test.pt)
-
-		for j, ck := range test.ck {
+		for j := len(test.ck) - 1; j >= 0; j-- {
+			ck := test.ck[j]
 			if ck.err != nil {
 				continue
 			}
-			for n := 0; n < ck.t; n++ {
+			for n := ck.t - 1; n >= 0; n-- {
 				if v, err := test.q.Pop(); err != nil {
 					fatalf(t, i, printf(j, n, "Pop method must return `nil` error, `%s` gives", err))
 				} else if !reflect.DeepEqual(n, v) {
@@ -126,10 +124,10 @@ func TestQueue_Pop(t *testing.T) {
 		err error
 	}{
 		{emptyQueue(), nil, eqErr},
-		{fullQueue(), 0, nil},
-		{popQueue(fullQueue(), 5), 5, nil},
+		{fullQueue(), capacity - 1, nil},
+		{popQueue(fullQueue(), 5), capacity - 1 - 5, nil},
 		{popQueue(fullQueue(), capacity), nil, eqErr},
-		{popQueue(pushQueue(emptyQueue(), 10), 3), 3, nil},
+		{popQueue(pushQueue(emptyQueue(), 10), 3), 10 - 1 - 3, nil},
 	}
 
 	for i, test := range tests {
@@ -150,8 +148,9 @@ func TestQueue_extend(t *testing.T) {
 		{emptyQueue(), 100, 0},
 		{pushQueue(emptyQueue(), eLen*100), 200, eLen * 100},
 		{fullQueue(), 200, capacity},
-		{popQueue(pushQueue(emptyQueue(), eLen*100), eLen), 199, eLen*100 - eLen},
-		{pushQueue(popQueue(pushQueue(emptyQueue(), eLen*100), eLen), 1), 199, eLen*100 - eLen + 1},
+		{popQueue(pushQueue(emptyQueue(), eLen*100), eLen*2), 100, eLen*100 - eLen*2},
+		{popQueue(pushQueue(emptyQueue(), eLen*100), eLen), 100, eLen*100 - eLen},
+		{pushQueue(popQueue(pushQueue(emptyQueue(), eLen*100), eLen), 1), 200, eLen*100 - eLen + 1},
 	}
 
 	for i, test := range tests {

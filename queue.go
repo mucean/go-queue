@@ -64,7 +64,7 @@ func (q *Queue) Pop() (v interface{}, err error) {
 		return nil, eqErr
 	}
 
-	e := q.lists[0]
+	e := q.tailElement()
 	v, err = e.Pop()
 
 	if err != nil {
@@ -73,7 +73,9 @@ func (q *Queue) Pop() (v interface{}, err error) {
 
 	q.count--
 	if q.len != 1 && e.IsEmpty() {
-		q.lists = q.lists[1:]
+		tail := q.tail()
+		q.lists[tail] = nil
+		q.lists = q.lists[:tail]
 		q.len--
 	}
 
@@ -81,7 +83,11 @@ func (q *Queue) Pop() (v interface{}, err error) {
 }
 
 func (q *Queue) tailElement() *Elements {
-	return q.lists[q.len-1]
+	return q.lists[q.tail()]
+}
+
+func (q *Queue) tail() int {
+	return q.len - 1
 }
 
 func (q *Queue) extend() error {

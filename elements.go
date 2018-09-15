@@ -29,10 +29,10 @@ func (e *Elements) Pop() (interface{}, error) {
 		return nil, emptyErr
 	}
 
+	tail := e.tail()
 	e.len -= 1
-	value := e.values[e.head]
-	e.values[e.head] = nil
-	e.head += 1
+	value := e.values[tail]
+	e.values[tail] = nil
 	return value, nil
 }
 
@@ -67,8 +67,7 @@ func (e *Elements) Find(f func(v interface{}) bool) (int, error) {
 		return 0, emptyErr
 	}
 
-	tail := e.tail()
-	for start := e.head; start <= tail; start += 1 {
+	for start := e.tail(); start >= e.head; start-- {
 		if f(e.values[start]) {
 			return start, nil
 		}
@@ -83,8 +82,7 @@ func (e *Elements) FindAll(f func(v interface{}) bool) ([]int, error) {
 	}
 
 	index := make([]int, 0)
-	tail := e.tail()
-	for start := e.head; start <= tail; start += 1 {
+	for start := e.tail(); start >= e.head; start-- {
 		if f(e.values[start]) {
 			index = append(index, start)
 		}
@@ -108,7 +106,7 @@ func (e *Elements) Rebuild() error {
 
 	old := e.values
 	e.values = make([]interface{}, e.cap)
-	length := copy(e.values, old[e.head:e.tail() + 1])
+	length := copy(e.values, old[e.head:e.tail()+1])
 	if length != e.len {
 		e.values = old
 		return errors.New("rebuild failed")
@@ -128,11 +126,11 @@ func (e *Elements) MoveHead(head int) int {
 		head = tail
 	}
 
-	index := make([]int, 0, head - e.head + 1)
+	index := make([]int, 0, head-e.head+1)
 	for i := e.head; i <= head; i++ {
 		index = append(index, i)
 	}
-	
+
 	return e.eraseByIndex(index)
 }
 
@@ -151,7 +149,7 @@ func (e *Elements) MoveTail(t int) int {
 		t = e.head
 	}
 
-	index := make([]int, 0, tail - t + 1)
+	index := make([]int, 0, tail-t+1)
 	for i := t; i <= tail; i++ {
 		index = append(index, i)
 	}
@@ -168,7 +166,7 @@ func (e *Elements) eraseByIndex(index []int) int {
 	if e.IsEmpty() {
 		return eCount
 	}
-	
+
 	sort.Ints(index)
 
 	doIndex := make([]int, 0, len(index))
@@ -185,6 +183,7 @@ func (e *Elements) eraseByIndex(index []int) int {
 	e.len -= eCount
 
 	if e.IsEmpty() {
+		e.head += eCount
 		return eCount
 	}
 
@@ -248,7 +247,7 @@ func (e *Elements) pushable() error {
 		return fullErr
 	}
 
-	if e.tail() + 1 >= e.cap {
+	if e.tail()+1 >= e.cap {
 		return pushErr
 	}
 
@@ -264,7 +263,7 @@ func (e *Elements) Cap() int {
 }
 
 func (e *Elements) IsFull() bool {
-	return e.len == e.cap
+	return e.len >= e.cap
 }
 
 func (e *Elements) IsEmpty() bool {
