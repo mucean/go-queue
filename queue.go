@@ -26,8 +26,8 @@ func NewQueueWithELen(eLen, cap int) *Queue {
 	}
 }
 
-var emptyQueue = errors.New("queue is empty")
-var fullQueue = errors.New("queue is full")
+var eqErr = errors.New("queue is empty")
+var fqErr = errors.New("queue is full")
 
 type Queue struct {
 	lists []*Elements
@@ -35,10 +35,6 @@ type Queue struct {
 	count int
 	len   int
 	cap   int
-}
-
-func (q *Queue) Len() int {
-	return q.count
 }
 
 func (q *Queue) Push(v interface{}) error {
@@ -65,29 +61,38 @@ func (q *Queue) Push(v interface{}) error {
 
 func (q *Queue) Pop() (v interface{}, err error) {
 	if q.IsEmpty() {
-		return nil, emptyQueue
+		return nil, eqErr
 	}
+
 	e := q.lists[0]
 	v, err = e.Pop()
 
-	if e.IsEmpty() {
+	if err != nil {
+		return
+	}
+
+	q.count--
+	if q.len != 1 && e.IsEmpty() {
 		q.lists = q.lists[1:]
+		q.len--
 	}
 
 	return
 }
 
 func (q *Queue) tailElement() *Elements {
-	return q.lists[q.len - 1]
+	return q.lists[q.len-1]
 }
 
 func (q *Queue) extend() error {
-	lists := make([]*Elements, 0, q.len + 100)
-	if copy(lists, q.lists) != q.len {
-		return errors.New("extend queue failed")
-	}
+	if q.len == cap(q.lists) {
+		lists := make([]*Elements, q.len, q.len+100)
+		if copy(lists, q.lists) != q.len {
+			return errors.New("extend queue failed")
+		}
 
-	q.lists = lists
+		q.lists = lists
+	}
 	q.len++
 	q.lists = append(q.lists, NewElements(q.eLen))
 	return nil
@@ -99,10 +104,14 @@ func (q *Queue) Pushable() bool {
 
 func (q *Queue) pushable() error {
 	if q.IsFull() {
-		return fullQueue
+		return fqErr
 	}
 
 	return nil
+}
+
+func (q *Queue) Len() int {
+	return q.count
 }
 
 func (q *Queue) IsEmpty() bool {
@@ -110,5 +119,5 @@ func (q *Queue) IsEmpty() bool {
 }
 
 func (q *Queue) IsFull() bool {
-	return q.cap == q.len
+	return q.cap == q.count
 }
