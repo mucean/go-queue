@@ -119,5 +119,5 @@ func (q *Queue) IsEmpty() bool {
 }
 
 func (q *Queue) IsFull() bool {
-	return q.cap == q.count
+	return q.cap <= q.count
 }
